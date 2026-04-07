@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LocaControl</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="auth-screen" class="auth-shell">
+      <div class="auth-card">
+        <div class="auth-brand">
+          <svg
+            width="40"
+            height="40"
+            viewBox="0 0 32 32"
+            fill="none"
+            aria-label="Logo LocaControl"
+          >
+            <rect width="32" height="32" rx="8" fill="var(--color-primary)" />
+            <path d="M8 22V10h4v9h8v3H8z" fill="white" opacity=".9" />
+            <rect x="17" y="10" width="7" height="7" rx="1" fill="white" />
+            <circle cx="20.5" cy="23" r="2.5" fill="white" opacity=".8" />
+          </svg>
+          <div>
+            <h1>LocaControl</h1>
+            <p>Login para acessar o sistema</p>
+          </div>
+        </div>
+        <div class="auth-tabs">
+          <button class="tab-btn active" data-auth-tab="login">Entrar</button>
+          <button class="tab-btn" data-auth-tab="signup">Criar conta</button>
+        </div>
+        <form id="login-form" class="auth-form active">
+          <div class="form-group">
+            <label class="form-label">E-mail</label
+            ><input class="form-input" id="login-email" type="email" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha</label
+            ><input
+              class="form-input"
+              id="login-password"
+              type="password"
+              required
+            />
+          </div>
+          <button class="btn btn-primary auth-btn" type="submit">Entrar</button>
+        </form>
+        <form id="signup-form" class="auth-form">
+          <div class="form-group">
+            <label class="form-label">Nome</label
+            ><input class="form-input" id="signup-name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail</label
+            ><input
+              class="form-input"
+              id="signup-email"
+              type="email"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha</label
+            ><input
+              class="form-input"
+              id="signup-password"
+              type="password"
+              required
+            />
+          </div>
+          <button class="btn btn-primary auth-btn" type="submit">
+            Criar conta
+          </button>
+        </form>
+        <p class="auth-help">
+          Preencha o arquivo <strong>config.js</strong> com as chaves do
+          Supabase.
+        </p>
+      </div>
+    </div>
+
+    <div id="app-shell" class="app hidden">
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 32 32"
+            fill="none"
+            aria-label="Logo LocaControl"
+          >
+            <rect width="32" height="32" rx="8" fill="var(--color-primary)" />
+            <path d="M8 22V10h4v9h8v3H8z" fill="white" opacity=".9" />
+            <rect x="17" y="10" width="7" height="7" rx="1" fill="white" />
+            <circle cx="20.5" cy="23" r="2.5" fill="white" opacity=".8" />
+          </svg>
+          <div>
+            <div class="logo-name">LocaControl</div>
+            <div class="logo-tag" id="user-email">Gestão de locações</div>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-label">Menu</div>
+          <div class="nav-item active" data-view="dashboard">
+            <i data-lucide="layout-dashboard"></i>Dashboard
+          </div>
+          <div class="nav-item" data-view="clientes">
+            <i data-lucide="users"></i>Clientes
+          </div>
+          <div class="nav-item" data-view="equipamentos">
+            <i data-lucide="package"></i>Equipamentos
+          </div>
+          <div class="nav-item" data-view="locacoes">
+            <i data-lucide="clipboard-list"></i>Locações Ativas
+          </div>
+          <div class="nav-item" data-view="historico">
+            <i data-lucide="history"></i>Histórico
+          </div>
+        </nav>
+
+        <div class="sidebar-footer stack-gap">
+          <button class="theme-btn" data-theme-toggle>
+            <i data-lucide="sun" style="width: 16px; height: 16px"></i>Alternar
+            tema
+          </button>
+          <button class="theme-btn" id="logout-btn">
+            <i data-lucide="log-out" style="width: 16px; height: 16px"></i>Sair
+          </button>
+        </div>
+      </aside>
+
+      <div class="main">
+        <div class="topbar">
+          <span class="topbar-title" id="page-title">Dashboard</span>
+          <div class="topbar-actions" id="page-actions"></div>
+        </div>
+
+        <div class="content">
+          <div class="sync-status" id="sync-status">
+            Conectado ao banco online
+          </div>
+          <div class="view active" id="view-dashboard">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon si-teal"><i data-lucide="users"></i></div>
+                <div class="stat-label">Clientes</div>
+                <div class="stat-value" id="s-cli">0</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon si-green">
+                  <i data-lucide="package-check"></i>
+                </div>
+                <div class="stat-label">Locações Ativas</div>
+                <div class="stat-value" id="s-loc">0</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon si-gold">
+                  <i data-lucide="package"></i>
+                </div>
+                <div class="stat-label">Equipamentos</div>
+                <div class="stat-value" id="s-eq">0</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon si-warn">
+                  <i data-lucide="package-x"></i>
+                </div>
+                <div class="stat-label">Disponíveis</div>
+                <div class="stat-value" id="s-dsp">0</div>
+              </div>
+            </div>
+
+            <div class="table-card">
+              <div class="table-header">
+                <span class="table-header-title">Locações Recentes</span>
+                <button class="btn btn-ghost btn-sm" data-go="locacoes">
+                  <i data-lucide="arrow-right"></i><span>Ver todas</span>
+                </button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Equipamento</th>
+                      <th>Cliente</th>
+                      <th>Data</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-tb"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="view" id="view-clientes">
+            <div class="table-card">
+              <div class="table-header">
+                <span class="table-header-title">Clientes Cadastrados</span>
+                <div class="search-box">
+                  <i data-lucide="search"></i
+                  ><input type="text" placeholder="Buscar..." id="srch-cli" />
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Telefone</th>
+                      <th>CPF/CNPJ</th>
+                      <th>Locações</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cli-tb"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="view" id="view-equipamentos">
+            <div class="tabs">
+              <div class="tab active" data-tab="todos">Todos</div>
+              <div class="tab" data-tab="disp">Disponíveis</div>
+              <div class="tab" data-tab="loc">Locados</div>
+            </div>
+            <div class="equip-grid" id="eq-grid"></div>
+          </div>
+
+          <div class="view" id="view-locacoes">
+            <div class="table-card">
+              <div class="table-header">
+                <span class="table-header-title">Locações Ativas</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Equipamento</th>
+                      <th>Cód.</th>
+                      <th>Cliente</th>
+                      <th>Telefone</th>
+                      <th>Data</th>
+                      <th>Prev. Dev.</th>
+                      <th>Obs.</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="loc-tb"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="view" id="view-historico">
+            <div class="table-card">
+              <div class="table-header">
+                <span class="table-header-title">Histórico de Devoluções</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Equipamento</th>
+                      <th>Cliente</th>
+                      <th>Locado em</th>
+                      <th>Devolvido em</th>
+                      <th>Duração</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hist-tb"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="mobile-nav hidden" id="mobile-nav">
+      <div class="mob-tab active" data-view="dashboard">
+        <i data-lucide="layout-dashboard"></i><span>Início</span>
+      </div>
+      <div class="mob-tab" data-view="clientes">
+        <i data-lucide="users"></i><span>Clientes</span>
+      </div>
+      <div class="mob-tab" data-view="equipamentos">
+        <i data-lucide="package"></i><span>Equip.</span>
+      </div>
+      <div class="mob-tab" data-view="locacoes">
+        <i data-lucide="clipboard-list"></i><span>Locações</span>
+      </div>
+      <div class="mob-tab" data-view="historico">
+        <i data-lucide="history"></i><span>Histórico</span>
+      </div>
+    </nav>
+
+    <div class="overlay" id="m-cli">
+      <div class="modal">
+        <div class="modal-head">
+          <h2 id="m-cli-t">Novo Cliente</h2>
+          <button class="close-btn" data-close="m-cli">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nome Completo *</label
+            ><input
+              class="form-input"
+              id="f-cn"
+              placeholder="Ex: João da Silva"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Telefone</label
+              ><input
+                class="form-input"
+                id="f-ct"
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">CPF/CNPJ</label
+              ><input
+                class="form-input"
+                id="f-cd"
+                placeholder="000.000.000-00"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Endereço</label
+            ><input
+              class="form-input"
+              id="f-ce"
+              placeholder="Rua, número, bairro"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail</label
+            ><input
+              class="form-input"
+              id="f-cm"
+              type="email"
+              placeholder="email@exemplo.com"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observações</label
+            ><textarea class="form-input" id="f-co" rows="2"></textarea>
+          </div>
+          <input type="hidden" id="f-cid" />
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" data-close="m-cli">Cancelar</button
+          ><button class="btn btn-primary" id="save-cli">
+            <i data-lucide="save"></i>Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="m-eq">
+      <div class="modal">
+        <div class="modal-head">
+          <h2 id="m-eq-t">Novo Equipamento</h2>
+          <button class="close-btn" data-close="m-eq">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Nome *</label
+              ><input
+                class="form-input"
+                id="f-en"
+                placeholder="Ex: Betoneira 400L"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Código</label
+              ><input class="form-input" id="f-ec" placeholder="EQ-001" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Categoria</label
+              ><select class="form-input form-select" id="f-ecat">
+                <option value="">Selecione...</option>
+                <option>Construção Civil</option>
+                <option>Jardinagem</option>
+                <option>Limpeza</option>
+                <option>Elétrico</option>
+                <option>Hidráulico</option>
+                <option>Transporte</option>
+                <option>Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valor Diária (R$)</label
+              ><input
+                class="form-input"
+                id="f-ev"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descrição</label
+            ><textarea class="form-input" id="f-ed" rows="2"></textarea>
+          </div>
+          <input type="hidden" id="f-eid" />
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" data-close="m-eq">Cancelar</button
+          ><button class="btn btn-primary" id="save-eq">
+            <i data-lucide="save"></i>Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="m-loc">
+      <div class="modal">
+        <div class="modal-head">
+          <h2>Alocar Equipamento</h2>
+          <button class="close-btn" data-close="m-loc">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Equipamento *</label
+            ><select class="form-input form-select" id="f-le"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cliente *</label
+            ><select class="form-input form-select" id="f-lc"></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Data Locação *</label
+              ><input class="form-input" id="f-ld" type="date" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Prev. Devolução</label
+              ><input class="form-input" id="f-lp" type="date" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observação</label
+            ><textarea class="form-input" id="f-lo" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" data-close="m-loc">Cancelar</button
+          ><button class="btn btn-primary" id="save-loc">
+            <i data-lucide="check"></i>Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="m-dev">
+      <div class="modal" style="max-width: 360px">
+        <div class="modal-head">
+          <h2>Registrar Devolução</h2>
+          <button class="close-btn" data-close="m-dev">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="confirm-text">
+            Confirmar devolução de <strong id="dev-en"></strong> pelo cliente
+            <strong id="dev-cn"></strong>?
+          </p>
+          <div class="form-group">
+            <label class="form-label">Data de Devolução</label
+            ><input class="form-input" id="f-dd" type="date" />
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" data-close="m-dev">Cancelar</button
+          ><button class="btn btn-primary" id="confirm-dev">
+            <i data-lucide="package-check"></i>Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script src="./config.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
