@@ -4,10 +4,13 @@ const CONFIG = window.APP_CONFIG || {};
 const hasSupabaseConfig =
   CONFIG.supabaseUrl &&
   CONFIG.supabaseAnonKey &&
-  !CONFIG.supabaseUrl.includes("COLE_AQUI");
+  !String(CONFIG.supabaseUrl).includes("COLE_AQUI");
 const supabase = hasSupabaseConfig
   ? createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey)
   : null;
+const recoveryRedirect =
+  CONFIG.resetPasswordRedirect ||
+  window.location.href.split("#")[0].split("?")[0];
 
 const state = {
   clientes: [],
@@ -18,6 +21,7 @@ const state = {
   eqTab: "todos",
   selectedDevId: null,
   currentUser: null,
+  authMode: "login",
 };
 const $ = (id) => document.getElementById(id);
 const gc = (id) => state.clientes.find((c) => c.id === id);
@@ -34,7 +38,7 @@ function toast(msg) {
   t.style.cssText = "transform:translateY(0);opacity:1;";
   setTimeout(() => {
     t.style.cssText = "transform:translateY(100px);opacity:0;";
-  }, 2500);
+  }, 3200);
 }
 function openModal(id) {
   $(id).classList.add("open");
@@ -66,19 +70,64 @@ function setupTheme() {
   });
 }
 
+function setAuthMode(mode) {
+  state.authMode = mode;
+  const titles = {
+    login: "Login para acessar o sistema",
+    signup: "Crie sua conta para começar a usar",
+    forgot: "Recupere o acesso à sua conta",
+    reset: "Defina uma nova senha para entrar",
+  };
+  $("auth-subtitle").textContent = titles[mode] || titles.login;
+  $("auth-tabs").classList.toggle(
+    "hidden",
+    mode === "forgot" || mode === "reset",
+  );
+  document
+    .querySelectorAll("[data-auth-tab]")
+    .forEach((btn) =>
+      btn.classList.toggle("active", btn.dataset.authTab === mode),
+    );
+  document
+    .querySelectorAll(".auth-form")
+    .forEach((f) => f.classList.remove("active"));
+  const formMap = {
+    login: "login-form",
+    signup: "signup-form",
+    forgot: "forgot-form",
+    reset: "reset-form",
+  };
+  $(formMap[mode]).classList.add("active");
+  lucide.createIcons();
+}
+
 function setupAuthTabs() {
   document.querySelectorAll("[data-auth-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document
-        .querySelectorAll("[data-auth-tab]")
-        .forEach((b) => b.classList.remove("active"));
-      document
-        .querySelectorAll(".auth-form")
-        .forEach((f) => f.classList.remove("active"));
-      btn.classList.add("active");
-      $(`${btn.dataset.authTab}-form`).classList.add("active");
-    });
+    btn.addEventListener("click", () => setAuthMode(btn.dataset.authTab));
   });
+  $("forgot-password-link").addEventListener("click", () => {
+    $("forgot-email").value = $("login-email").value.trim();
+    setAuthMode("forgot");
+  });
+  $("back-to-login-link").addEventListener("click", () => setAuthMode("login"));
+  $("back-to-login-from-reset").addEventListener("click", () => {
+    history.replaceState(
+      {},
+      document.title,
+      window.location.pathname + window.location.search,
+    );
+    setAuthMode("login");
+  });
+}
+
+function isRecoveryUrl() {
+  const hash = window.location.hash || "";
+  const search = window.location.search || "";
+  return (
+    /type=recovery/.test(hash) ||
+    /type=recovery/.test(search) ||
+    /access_token=/.test(hash)
+  );
 }
 
 async function signUp(e) {
@@ -95,6 +144,8 @@ async function signUp(e) {
   });
   if (error) return toast(error.message);
   toast("Conta criada. Confira seu e-mail para confirmação, se habilitado.");
+  $("signup-form").reset();
+  setAuthMode("login");
 }
 
 async function signIn(e) {
@@ -105,6 +156,46 @@ async function signIn(e) {
   const password = $("login-password").value;
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return toast(error.message);
+}
+
+async function requestPasswordReset(e) {
+  e.preventDefault();
+  if (!supabase)
+    return alert("Preencha o config.js com as credenciais do Supabase.");
+  const email = $("forgot-email").value.trim();
+  if (!email) return toast("Informe seu e-mail.");
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: recoveryRedirect,
+  });
+  if (error) return toast(error.message);
+  toast(
+    "Se existir uma conta com esse e-mail, enviaremos um link de redefinição.",
+  );
+  $("forgot-form").reset();
+  setAuthMode("login");
+}
+
+async function updateRecoveredPassword(e) {
+  e.preventDefault();
+  if (!supabase)
+    return alert("Preencha o config.js com as credenciais do Supabase.");
+  const password = $("reset-password").value;
+  const confirmPassword = $("reset-password-confirm").value;
+  if (password.length < 6)
+    return toast("A nova senha deve ter pelo menos 6 caracteres.");
+  if (password !== confirmPassword) return toast("As senhas não conferem.");
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return toast(error.message);
+  toast("Senha atualizada com sucesso. Faça login com a nova senha.");
+  $("reset-form").reset();
+  history.replaceState(
+    {},
+    document.title,
+    window.location.pathname + window.location.search,
+  );
+  await supabase.auth.signOut();
+  setAuthMode("login");
+  showAuth(true);
 }
 
 async function signOut() {
@@ -118,15 +209,37 @@ async function getSessionAndBoot() {
     setSyncStatus("Configure o Supabase no config.js", true);
     return;
   }
+  if (isRecoveryUrl()) setAuthMode("reset");
   const { data } = await supabase.auth.getSession();
   handleSession(data.session);
-  supabase.auth.onAuthStateChange((_event, session) => handleSession(session));
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY") {
+      showAuth(true);
+      setAuthMode("reset");
+      toast("Digite sua nova senha para concluir a recuperação.");
+      return;
+    }
+    handleSession(session);
+  });
+}
+
+let realtimeChannels = [];
+function teardownRealtime() {
+  realtimeChannels.forEach((channel) => supabase?.removeChannel(channel));
+  realtimeChannels = [];
 }
 
 async function handleSession(session) {
   if (!session) {
     state.currentUser = null;
+    teardownRealtime();
     showAuth(true);
+    if (!isRecoveryUrl() && state.authMode !== "forgot") setAuthMode("login");
+    return;
+  }
+  if (isRecoveryUrl()) {
+    showAuth(true);
+    setAuthMode("reset");
     return;
   }
   state.currentUser = session.user;
@@ -167,22 +280,20 @@ async function loadAllData() {
   renderAll();
 }
 
-let realtimeReady = false;
 function setupRealtime() {
-  if (realtimeReady || !supabase) return;
-  realtimeReady = true;
+  if (!supabase || realtimeChannels.length) return;
   ["clientes", "equipamentos", "locacoes", "historico"].forEach((table) => {
-    supabase
+    const channel = supabase
       .channel(`realtime-${table}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table },
         async () => {
           await loadAllData();
-          toast(`Atualização online recebida: ${table}`);
         },
       )
       .subscribe();
+    realtimeChannels.push(channel);
   });
 }
 
@@ -522,6 +633,8 @@ function bindStaticEvents() {
   $("logout-btn").addEventListener("click", signOut);
   $("login-form").addEventListener("submit", signIn);
   $("signup-form").addEventListener("submit", signUp);
+  $("forgot-form").addEventListener("submit", requestPasswordReset);
+  $("reset-form").addEventListener("submit", updateRecoveredPassword);
   document.body.addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
@@ -540,6 +653,7 @@ function boot() {
   setupAuthTabs();
   bindStaticEvents();
   renderActions("dashboard");
+  setAuthMode("login");
   lucide.createIcons();
   getSessionAndBoot();
 }
